@@ -41,4 +41,4 @@ src/
 evals/           golden questions, runner
 ```
 
-`loop/`, `tools/`, `prompts/`, `context/` and `evals/` do not exist yet.
+`tools/` currently holds a fake executor with one made-up tool; it is replaced by the backend catalog client later. `context/` and `evals/` do not exist yet.
