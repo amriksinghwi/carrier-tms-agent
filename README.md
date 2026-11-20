@@ -28,14 +28,17 @@ Check: `GET http://localhost:4100/health` returns `{"status":"ok"}`.
 
 ```
 src/
-  server.ts      HTTP entry
+  server.ts      HTTP server start, graceful shutdown, process signals
+  app.ts         Express app: middleware, routes, 404 and error handling
+  routes.ts      Route registration
   config/        environment
-  loop/          model loop, step limit, retries
+  chat/          chat controller
   providers/     LlmProvider interface + adapters
+  loop/          model loop, step limit, retries
   tools/         catalog client + cache, generic tool caller
   prompts/       versioned system prompts
   context/       history trimming
 evals/           golden questions, runner
 ```
 
-Only `server.ts` and `config/` exist so far.
+`loop/`, `tools/`, `prompts/`, `context/` and `evals/` do not exist yet.
