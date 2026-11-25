@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
+import { env } from '../config/env';
 import { runAgentLoop } from '../loop/agentLoop';
 import { SUBJECT_PROMPTS } from '../prompts';
 import { llmProvider } from '../providers';
-import { toolExecutor } from '../tools';
+import { BackendToolExecutor } from '../tools';
 
 export async function chat(req: Request, res: Response) {
   const subject = typeof req.body?.subject === 'string' ? req.body.subject : '';
@@ -16,6 +17,14 @@ export async function chat(req: Request, res: Response) {
     res.status(400).json({ code: 'INVALID_MESSAGE', message: 'Message is required and must be at most 4000 characters.' });
     return;
   }
+
+  const turnToken = typeof req.body?.turn_token === 'string' ? req.body.turn_token : '';
+  const toolExecutor = new BackendToolExecutor({
+    baseUrl: env.backendBaseUrl,
+    turnToken,
+    allowedTools: turnToken && Array.isArray(req.body?.allowed_tools) ? req.body.allowed_tools.filter((name: unknown) => typeof name === 'string') : [],
+    catalogVersion: typeof req.body?.catalog_version === 'string' ? req.body.catalog_version : '',
+  });
 
   try {
     res.json(await runAgentLoop({ provider: llmProvider, toolExecutor, systemPrompt: SUBJECT_PROMPTS[subject], userMessage: message }));

@@ -39,18 +39,43 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     };
 
     let response: Response;
-    try {
-      response = await fetch(`${this.config.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(60_000),
-      });
-    } catch (error) {
-      throw new LlmProviderError('LLM request failed', { cause: error });
+    for (let attempt = 1; ; attempt++) {
+      try {
+        response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(60_000),
+        });
+      } catch (error) {
+        throw new LlmProviderError('LLM request failed', { cause: error });
+      }
+
+      // Rate limited: wait as long as the provider asks (capped) and try again, at most twice.
+      const retryAfterSeconds = Number(response.headers.get('retry-after'));
+      if (response.status !== 429 || attempt > 2 || retryAfterSeconds > 20) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, (retryAfterSeconds > 0 ? retryAfterSeconds : 2) * 1000));
+    }
+
+    if (response.status === 400) {
+      // The provider validates tool arguments against the schema and rejects the whole reply when they do not match.
+      // Hand that back as a rejected tool call so the loop can let the model correct itself.
+      const text = await response.text();
+      let error: { code?: string; message?: string } | undefined;
+      try {
+        error = (JSON.parse(text) as { error?: { code?: string; message?: string } }).error;
+      } catch {
+        error = undefined;
+      }
+      if (error?.code === 'tool_use_failed') {
+        return { content: '', toolCalls: [], rejectedToolCall: error.message ?? 'The tool call was invalid', usage: { inputTokens: 0, outputTokens: 0 } };
+      }
+      throw new LlmProviderError(`LLM responded 400: ${text.slice(0, 500)}`);
     }
 
     if (!response.ok) {

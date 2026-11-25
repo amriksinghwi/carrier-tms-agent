@@ -31,6 +31,14 @@ export async function runAgentLoop(input: { provider: LlmProvider; toolExecutor:
     usage.inputTokens += response.usage.inputTokens;
     usage.outputTokens += response.usage.outputTokens;
 
+    if (response.rejectedToolCall) {
+      messages.push({
+        role: 'user',
+        content: `System note: your last tool call was rejected and nothing was run. Reason: ${response.rejectedToolCall}. Call the tool again with valid arguments, or answer without it.`,
+      });
+      continue;
+    }
+
     if (!response.toolCalls.length) {
       return { answer: response.content, stopReason: 'completed', modelCalls, toolCalls: toolCallLog, usage };
     }

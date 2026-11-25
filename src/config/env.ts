@@ -18,6 +18,7 @@ if (!Number.isInteger(port) || port <= 0) {
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port,
+  backendBaseUrl: required('TMS_BACKEND_BASE_URL').replace(/\/+$/, ''),
   llm: {
     provider: required('LLM_PROVIDER'),
     baseUrl: required('LLM_BASE_URL').replace(/\/+$/, ''),

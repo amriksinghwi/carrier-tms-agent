@@ -29,6 +29,8 @@ export type LlmRequest = {
 export type LlmResponse = {
   content: string;
   toolCalls: LlmToolCall[];
+  // Set when the provider refused the model's tool call (for example arguments outside the schema). Nothing was run.
+  rejectedToolCall?: string;
   usage: LlmUsage;
 };
 
